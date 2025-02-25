@@ -1,0 +1,135 @@
+version: '3'
+
+networks:
+    traefik-public:
+
+services:
+    traefik:
+        image: traefik:2.10
+        command:
+            --providers.docker=true
+            --providers.docker.exposedByDefault=false
+            --entryPoints.http.address=:80
+        ports:
+            - "80:80"
+        networks:
+            - traefik-public
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+        labels:
+            - traefik.enable=true
+            - traefik.docker.network=traefik-public
+    app:
+        build:
+            context: ./docker/nginx
+            dockerfile: Dockerfile
+            args:
+                - UID=${UID:-1000}
+                - GID=${GID:-1000}
+        volumes:
+            - ./backend:/var/www/html:delegated
+        depends_on:
+            - php
+            - mysql
+            - mailer
+        networks:
+            - traefik-public
+            - default
+        labels:
+            - traefik.enable=true
+            - traefik.docker.network=traefik-public
+            - traefik.http.routers.app.rule=Host(`backend.localhost`)
+            - traefik.http.routers.app.entryPoints=http
+            - traefik.http.services.app.loadBalancer.server.port=80
+
+    mysql:
+        image: mariadb:10.6
+        restart: unless-stopped
+        tty: true
+        ports:
+            - "3306:3306"
+        environment:
+            MYSQL_ROOT_PASSWORD: secret
+            SERVICE_TAGS: dev
+            SERVICE_NAME: mysql
+        networks:
+            - traefik-public
+            - default
+        volumes:
+            - ./docker/data/mysql/lib:/var/lib/mysql
+            - ./docker/mysql/dump:/docker-entrypoint-initdb.d
+
+    php:
+        build:
+            context: ./docker/php
+            dockerfile: Dockerfile
+            args:
+                - UID=${UID:-1000}
+                - GID=${GID:-1000}
+                - XDEBUG_REMOTE_HOST=${XDEBUG_REMOTE_HOST}
+        ports:
+            - "9000:9000"
+        volumes:
+            - ./backend:/var/www/html:delegated
+        environment:
+            PHP_IDE_CONFIG: serverName=${COMPOSE_PROJECT_NAME}
+        networks:
+            - traefik-public
+            - default
+    composer:
+        build:
+            context: ./docker/php
+            dockerfile: Dockerfile
+            args:
+                - UID=${UID:-1000}
+                - GID=${GID:-1000}
+        volumes:
+            - ./backend:/var/www/html
+        depends_on:
+            - php
+        entrypoint: [ 'composer' ]
+        networks:
+            - traefik-public
+            - default
+
+    npm:
+        image: node:current-alpine
+        volumes:
+            - ./backend:/var/www/html
+        ports:
+            - "3000:3000"
+            - "3001:3001"
+            - "5173:5173"
+        working_dir: /var/www/html
+        entrypoint: [ 'npm' ]
+        networks:
+            - traefik-public
+            - default
+
+    artisan:
+        build:
+            context: ./docker/php
+            dockerfile: Dockerfile
+            args:
+                - UID=${UID:-1000}
+                - GID=${GID:-1000}
+        volumes:
+            - ./backend:/var/www/html:delegated
+        depends_on:
+            - mysql
+        entrypoint: [ 'php', '/var/www/html/artisan' ]
+        networks:
+            - traefik-public
+            - default
+
+    mailer:
+        image: mailhog/mailhog
+        networks:
+            - traefik-public
+            - default
+        labels:
+            - traefik.enable=true
+            - traefik.docker.network=traefik-public
+            - traefik.http.routers.mailer.rule=Host(`mailer.localhost`)
+            - traefik.http.routers.mailer.entryPoints=http
+            - traefik.http.services.mailer.loadBalancer.server.port=8025

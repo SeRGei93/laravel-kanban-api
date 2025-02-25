@@ -1,0 +1,6 @@
+/docker/data/
+/.idea
+.env
+/backend/.env.testing
+*.sql
+*.sql.gz
