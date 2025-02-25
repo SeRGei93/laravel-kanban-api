@@ -4,3 +4,4 @@
 /backend/.env.testing
 *.sql
 *.sql.gz
+!/docker/mysql/dump/mysql-init.sql
