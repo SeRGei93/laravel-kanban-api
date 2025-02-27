@@ -3,11 +3,13 @@
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\BoardColumnCreateController;
 use App\Http\Controllers\BoardController;
+use App\Http\Controllers\CardMoveController;
 use App\Http\Controllers\CardsReorderUpdateController;
 use App\Http\Controllers\ColumnCardCreateController;
 use App\Http\Controllers\ColumnCardDestroyController;
 use App\Http\Controllers\ColumnCardUpdateController;
 use App\Http\Controllers\ColumnDestroyController;
+use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -32,4 +34,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     Route::put('/cards/reorder', CardsReorderUpdateController::class)
         ->name('cards.reorder');
+
+    Route::put('/v1/columns/{fromColumn}/cards/{card}/move/{toColumn}', [CardMoveController::class, 'move'])
+        ->scopeBindings()
+        ->name('columns.cards.move');
 });

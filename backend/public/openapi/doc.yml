@@ -1,0 +1,444 @@
+openapi: 3.0.0
+info:
+  title: API Документация для приложения
+  description: API для работы с досками, колонками и карточками.
+  version: 1.0.0
+
+servers:
+  - description: local
+    url: 'http://backend.localhost/api'
+  - description: dev
+    url: 'https://good-code.pro/api'
+paths:
+  /register:
+    post:
+      summary: Регистрация пользователя
+      description: Регистрирует нового пользователя.
+      operationId: registerUser
+      tags:
+        - Auth
+      requestBody:
+        description: Данные для регистрации пользователя
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "John Doe"
+                  required: true
+                email:
+                  type: string
+                  example: "john.doe@example.com"
+                  required: true
+                password:
+                  type: string
+                  example: "password123"
+                  required: true
+      responses:
+        '201':
+          description: Пользователь успешно зарегистрирован
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    example: "some-generated-token"
+        '400':
+          description: Ошибка валидации
+        '409':
+          description: Пользователь с таким email уже существует
+
+  /login:
+    post:
+      summary: Авторизация пользователя
+      description: Аутентифицирует пользователя и выдает токен.
+      operationId: loginUser
+      tags:
+        - Auth
+      requestBody:
+        description: Данные для авторизации пользователя
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                login:
+                  type: string
+                  example: "john.doe@example.com"
+                  required: true
+                password:
+                  type: string
+                  example: "password123"
+                  required: true
+      responses:
+        '200':
+          description: Успешный вход в систему
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    example: "some-generated-token"
+        '401':
+          description: Неверные учетные данные
+        '400':
+          description: Ошибка валидации
+  /v1/boards/{board?}:
+    get:
+      summary: Получить доску
+      description: Возвращает информацию о доске с колонками и карточками.
+      operationId: getBoard
+      tags:
+        - Boards
+      parameters:
+        - in: path
+          name: board
+          required: false
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Доска успешно возвращена
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  board:
+                    $ref: '#/components/schemas/Board'
+        '401':
+          description: Неавторизованный доступ
+        '404':
+          description: Доска не найдена
+      security:
+        - BearerAuth: []
+
+  /v1/boards/{board}/columns:
+    post:
+      summary: Создать колонку на доске
+      description: Создает новую колонку для указанной доски.
+      operationId: createColumn
+      tags:
+        - Columns
+      parameters:
+        - in: path
+          name: board
+          required: true
+          schema:
+            type: integer
+            example: 1
+      requestBody:
+        description: Данные для создания колонки
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreColumnRequest'
+      responses:
+        '201':
+          description: Колонка успешно создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Column'
+        '400':
+          description: Ошибка валидации
+        '401':
+          description: Неавторизованный доступ
+        '404':
+          description: Доска не найдена
+      security:
+        - BearerAuth: []
+
+  /v1/columns/{column}:
+    delete:
+      summary: Удалить колонку
+      description: Удаляет указанную колонку.
+      operationId: deleteColumn
+      tags:
+        - Columns
+      parameters:
+        - in: path
+          name: column
+          required: true
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Колонка успешно удалена
+        '401':
+          description: Неавторизованный доступ
+        '404':
+          description: Колонка не найдена
+      security:
+        - BearerAuth: []
+
+  /v1/columns/{column}/cards:
+    post:
+      summary: Создать карточку в колонке
+      description: Создает новую карточку в указанной колонке.
+      operationId: createCard
+      tags:
+        - Cards
+      parameters:
+        - in: path
+          name: column
+          required: true
+          schema:
+            type: integer
+            example: 1
+      requestBody:
+        description: Данные для создания карточки
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreCardRequest'
+      responses:
+        '201':
+          description: Карточка успешно создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Card'
+        '400':
+          description: Ошибка валидации
+        '401':
+          description: Неавторизованный доступ
+        '404':
+          description: Колонка не найдена
+      security:
+        - BearerAuth: []
+
+  /v1/columns/{column}/cards/{card}:
+    put:
+      summary: Обновить карточку в колонке
+      description: Обновляет информацию о карточке в указанной колонке.
+      operationId: updateCard
+      tags:
+        - Cards
+      parameters:
+        - in: path
+          name: column
+          required: true
+          schema:
+            type: integer
+            example: 1
+        - in: path
+          name: card
+          required: true
+          schema:
+            type: integer
+            example: 1
+      requestBody:
+        description: Данные для обновления карточки
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCardRequest'
+      responses:
+        '200':
+          description: Карточка успешно обновлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Card'
+        '400':
+          description: Ошибка валидации
+        '401':
+          description: Неавторизованный доступ
+        '404':
+          description: Карточка или колонка не найдены
+      security:
+        - BearerAuth: []
+    delete:
+      summary: Удалить карточку
+      description: Удаляет указанную карточку.
+      operationId: deleteCard
+      tags:
+        - Cards
+      parameters:
+        - in: path
+          name: column
+          required: true
+          schema:
+            type: integer
+            example: 1
+        - in: path
+          name: card
+          required: true
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Карточка успешно удалена
+        '401':
+          description: Неавторизованный доступ
+        '404':
+          description: Карточка или колонка не найдены
+      security:
+        - BearerAuth: []
+
+  /v1/cards/reorder:
+    put:
+      summary: Переставить карточки в колонках
+      description: Обновляет порядок карточек внутри колонок.
+      operationId: reorderCards
+      tags:
+        - Cards
+      requestBody:
+        description: Данные для обновления порядка карточек
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CardsReorderUpdateRequest'
+      responses:
+        '200':
+          description: Порядок карточек успешно обновлен
+        '400':
+          description: Ошибка валидации
+        '401':
+          description: Неавторизованный доступ
+      security:
+        - BearerAuth: []
+
+  /v1/columns/{toColumn}/cards/{card}/move:
+    put:
+      summary: Переместить карточку в другую колонку
+      description: Перемещает карточку в указанную колонку.
+      operationId: moveCard
+      tags:
+        - Cards
+      parameters:
+        - in: path
+          name: toColumn
+          required: true
+          schema:
+            type: integer
+            example: 2
+        - in: path
+          name: card
+          required: true
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Карточка успешно перемещена
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Card moved successfully.'
+                  card:
+                    $ref: '#/components/schemas/Card'
+                  from_column:
+                    $ref: '#/components/schemas/Column'
+                  to_column:
+                    $ref: '#/components/schemas/Column'
+        '400':
+          description: Карта уже находится в целевом столбце
+        '401':
+          description: Неавторизованный доступ
+        '404':
+          description: Карточка или колонка не найдены
+        '422':
+          description: Ошибка валидации данных
+      security:
+        - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Board:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/Column'
+
+    Column:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+
+    Card:
+      type: object
+      properties:
+        id:
+          type: integer
+        content:
+          type: string
+
+    StoreColumnRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          example: "New Column"
+          required: true
+
+    StoreCardRequest:
+      type: object
+      properties:
+        content:
+          type: string
+          example: "New card content"
+          required: true
+
+    UpdateCardRequest:
+      type: object
+      properties:
+        content:
+          type: string
+          example: "Updated card content"
+          required: true
+
+    CardsReorderUpdateRequest:
+      type: object
+      properties:
+        columns:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              cards:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    position:
+                      type: integer
