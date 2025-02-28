@@ -8,7 +8,7 @@ servers:
   - description: local
     url: 'http://backend.localhost/api'
   - description: dev
-    url: 'https://good-code.pro/api'
+    url: 'https://kanban.good-code.pro/api'
 paths:
   /register:
     post:
